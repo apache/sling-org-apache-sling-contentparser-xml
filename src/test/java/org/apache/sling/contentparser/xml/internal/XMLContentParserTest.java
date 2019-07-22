@@ -40,7 +40,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
-public class XmlContentParserTest {
+public class XMLContentParserTest {
 
     private File file;
     private ContentParser underTest;
@@ -48,7 +48,7 @@ public class XmlContentParserTest {
     @Before
     public void setUp() {
         file = new File("src/test/resources/content-test/content.xml");
-        underTest = new XmlContentParser();
+        underTest = new XMLContentParser();
     }
 
     @Test
