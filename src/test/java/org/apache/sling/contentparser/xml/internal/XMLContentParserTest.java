@@ -19,6 +19,7 @@
 package org.apache.sling.contentparser.xml.internal;
 
 import java.io.File;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -28,7 +29,6 @@ import java.util.Map;
 import java.util.TimeZone;
 
 import org.apache.sling.contentparser.api.ContentParser;
-import org.apache.sling.contentparser.api.ParseException;
 import org.apache.sling.contentparser.api.ParserOptions;
 import org.apache.sling.contentparser.testutils.TestUtils;
 import org.apache.sling.contentparser.testutils.mapsupport.ContentElement;
@@ -114,7 +114,7 @@ public class XMLContentParserTest {
         assertEquals("äöüß€", props.get("utf8Property"));
     }
 
-    @Test(expected = ParseException.class)
+    @Test(expected = IOException.class)
     public void testParseInvalidJson() throws Exception {
         file = new File("src/test/resources/invalid-test/invalid.json");
 
@@ -122,7 +122,7 @@ public class XMLContentParserTest {
         assertNull(content);
     }
 
-    @Test(expected = ParseException.class)
+    @Test(expected = IOException.class)
     public void testParseInvalidJsonWithObjectList() throws Exception {
         file = new File("src/test/resources/invalid-test/contentWithObjectList.json");
 
@@ -134,7 +134,7 @@ public class XMLContentParserTest {
     public void testIgnoreResourcesProperties() throws Exception {
         ContentElement content = TestUtils.parse(underTest,
                 new ParserOptions().ignoreResourceNames(Collections.unmodifiableSet(new HashSet<>(Arrays.asList("header", "newslist"))))
-                        .ignorePropertyNames(Collections.unmodifiableSet(new HashSet<>(Arrays.asList("jcr:title")))), file);
+                        .ignorePropertyNames(Collections.unmodifiableSet(new HashSet<>(Collections.singletonList("jcr:title")))), file);
         ContentElement child = content.getChild("jcr:content");
         assertNotNull("Expected child at jcr:content", child);
         Map<String, Object> props = child.getProperties();

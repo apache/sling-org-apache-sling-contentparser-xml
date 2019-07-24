@@ -26,14 +26,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.contentparser.api.ContentHandler;
 import org.apache.sling.contentparser.api.ContentParser;
-import org.apache.sling.contentparser.api.ParseException;
 import org.apache.sling.contentparser.api.ParserHelper;
 import org.apache.sling.contentparser.api.ParserOptions;
 import org.osgi.service.component.annotations.Component;
@@ -41,7 +40,6 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-import org.xml.sax.SAXException;
 
 /**
  * Parses XML files that contains content fragments.
@@ -58,21 +56,30 @@ public final class XMLContentParser implements ContentParser {
     private final DocumentBuilderFactory documentBuilderFactory;
 
     public XMLContentParser() {
-        documentBuilderFactory = DocumentBuilderFactory.newInstance();
+        try {
+            DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+            dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+            dbf.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
+            dbf.setAttribute(XMLConstants.FEATURE_SECURE_PROCESSING, Boolean.TRUE);
+            dbf.setExpandEntityReferences(false);
+            documentBuilderFactory = dbf;
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException("Cannot disable DTD features.", e);
+        }
     }
 
     @Override
-    public void parse(ContentHandler handler, InputStream is, ParserOptions parserOptions) throws IOException, ParseException {
+    public void parse(ContentHandler handler, InputStream is, ParserOptions parserOptions) throws IOException {
         try {
             DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
             Document doc = documentBuilder.parse(is);
             parse(handler, doc.getDocumentElement(), parserOptions, null);
-        } catch (ParserConfigurationException | SAXException ex) {
-            throw new ParseException("Error parsing JCR XML content.", ex);
+        } catch (Exception ex) {
+            throw new IOException("Error parsing JCR XML content.", ex);
         }
     }
 
-    private void parse(ContentHandler handler, Element element, ParserOptions parserOptions, String parentPath) {
+    private void parse(ContentHandler handler, Element element, ParserOptions parserOptions, String parentPath) throws IOException {
         // build node path
         String path;
         if (parentPath == null) {
@@ -80,7 +87,7 @@ public final class XMLContentParser implements ContentParser {
         } else {
             String name = getChildText(element, "name");
             if (StringUtils.isEmpty(name)) {
-                throw new ParseException("Child node without name detected below path " + parentPath);
+                throw new IOException("Child node without name detected below path " + parentPath);
             }
             if (parserOptions.getIgnoreResourceNames().contains(name)) {
                 return;
@@ -92,8 +99,8 @@ public final class XMLContentParser implements ContentParser {
 
         // primary node type and mixins
         String primaryType = getChildText(element, "primaryNodeType");
-        if (StringUtils.isNotBlank(primaryType) && !parserOptions.getIgnorePropertyNames().contains("jcr:primaryType")) {
-            properties.put("jcr:primaryType", primaryType);
+        if (StringUtils.isNotBlank(primaryType) && !parserOptions.getIgnorePropertyNames().contains(JCR_PRIMARY_TYPE)) {
+            properties.put(JCR_PRIMARY_TYPE, primaryType);
         }
         String[] mixins = getChildTextArray(element, "mixinNodeType");
         if (mixins.length > 0 && !parserOptions.getIgnorePropertyNames().contains("jcr:mixinTypes")) {
@@ -107,7 +114,7 @@ public final class XMLContentParser implements ContentParser {
             // property name
             String name = getChildText(propertyElement, "name");
             if (StringUtils.isBlank(name)) {
-                throw new ParseException("Property without name detected at path " + path);
+                throw new IOException("Property without name detected at path " + path);
             }
             if (parserOptions.getIgnorePropertyNames().contains(name)) {
                 continue;
@@ -116,7 +123,7 @@ public final class XMLContentParser implements ContentParser {
             // property type
             String type = getChildText(propertyElement, "type");
             if (StringUtils.isBlank(type)) {
-                throw new ParseException("Property '" + name + "' has no type at path " + path);
+                throw new IOException("Property '" + name + "' has no type at path " + path);
             }
 
             // property value
@@ -138,10 +145,8 @@ public final class XMLContentParser implements ContentParser {
         }
 
         String defaultPrimaryType = parserOptions.getDefaultPrimaryType();
-        if (defaultPrimaryType != null) {
-            if (!properties.containsKey(JCR_PRIMARY_TYPE)) {
-                properties.put(JCR_PRIMARY_TYPE, defaultPrimaryType);
-            }
+        if (defaultPrimaryType != null && !properties.containsKey(JCR_PRIMARY_TYPE)) {
+            properties.put(JCR_PRIMARY_TYPE, defaultPrimaryType);
         }
         handler.resource(path, properties);
 
@@ -169,14 +174,14 @@ public final class XMLContentParser implements ContentParser {
         return result;
     }
 
-    private String getChildText(Element element, String childName) {
+    private String getChildText(Element element, String childName) throws IOException {
         List<Element> children = getChildren(element, childName);
         if (children.isEmpty()) {
             return null;
         } else if (children.size() == 1) {
             return children.get(0).getTextContent();
         } else {
-            throw new ParseException("Found multiple elements with name '" + childName + "': " + children.size());
+            throw new IOException("Found multiple elements with name '" + childName + "': " + children.size());
         }
     }
 
@@ -209,7 +214,7 @@ public final class XMLContentParser implements ContentParser {
             case "Decimal":
                 return new BigDecimal(value);
             default:
-                throw new ParseException(String.format("Unsupported property type: %s.", type));
+                throw new IllegalArgumentException(String.format("Unsupported property type: %s.", type));
         }
     }
 
