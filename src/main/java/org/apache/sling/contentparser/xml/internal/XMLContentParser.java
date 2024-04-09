@@ -1,22 +1,26 @@
-/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- ~ Licensed to the Apache Software Foundation (ASF) under one
- ~ or more contributor license agreements.  See the NOTICE file
- ~ distributed with this work for additional information
- ~ regarding copyright ownership.  The ASF licenses this file
- ~ to you under the Apache License, Version 2.0 (the
- ~ "License"); you may not use this file except in compliance
- ~ with the License.  You may obtain a copy of the License at
- ~
- ~   http://www.apache.org/licenses/LICENSE-2.0
- ~
- ~ Unless required by applicable law or agreed to in writing,
- ~ software distributed under the License is distributed on an
- ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- ~ KIND, either express or implied.  See the License for the
- ~ specific language governing permissions and limitations
- ~ under the License.
- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 package org.apache.sling.contentparser.xml.internal;
+
+import javax.xml.XMLConstants;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -25,10 +29,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import javax.xml.XMLConstants;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.contentparser.api.ContentHandler;
@@ -45,11 +45,7 @@ import org.w3c.dom.NodeList;
  * Parses XML files that contains content fragments.
  * Instance of this class is thread-safe.
  */
-@Component(
-        property = {
-                ContentParser.SERVICE_PROPERTY_CONTENT_TYPE + "=xml"
-        }
-)
+@Component(property = {ContentParser.SERVICE_PROPERTY_CONTENT_TYPE + "=xml"})
 public final class XMLContentParser implements ContentParser {
 
     private static final String JCR_PRIMARY_TYPE = "jcr:primaryType";
@@ -79,7 +75,8 @@ public final class XMLContentParser implements ContentParser {
         }
     }
 
-    private void parse(ContentHandler handler, Element element, ParserOptions parserOptions, String parentPath) throws IOException {
+    private void parse(ContentHandler handler, Element element, ParserOptions parserOptions, String parentPath)
+            throws IOException {
         // build node path
         String path;
         if (parentPath == null) {
@@ -99,7 +96,8 @@ public final class XMLContentParser implements ContentParser {
 
         // primary node type and mixins
         String primaryType = getChildText(element, "primaryNodeType");
-        if (StringUtils.isNotBlank(primaryType) && !parserOptions.getIgnorePropertyNames().contains(JCR_PRIMARY_TYPE)) {
+        if (StringUtils.isNotBlank(primaryType)
+                && !parserOptions.getIgnorePropertyNames().contains(JCR_PRIMARY_TYPE)) {
             properties.put(JCR_PRIMARY_TYPE, primaryType);
         }
         String[] mixins = getChildTextArray(element, "mixinNodeType");
@@ -155,7 +153,6 @@ public final class XMLContentParser implements ContentParser {
         for (Element node : nodeElements) {
             parse(handler, node, parserOptions, path);
         }
-
     }
 
     private List<Element> getChildren(Element element, String childName) {
@@ -225,5 +222,4 @@ public final class XMLContentParser implements ContentParser {
         }
         return ParserHelper.convertSingleTypeArray(result);
     }
-
 }
